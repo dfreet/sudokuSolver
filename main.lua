@@ -8,18 +8,33 @@ local squareSize = 50
 local squares = 9
 local selectionBorder = 4
 
-local solveBtn = {  x=border + (squares-2) * squareSize + selectionBorder,
+local choiceBtn = { x=border + selectionBorder,
+                    y=border + squares * squareSize + selectionBorder,
+                    width=squareSize * 3 - selectionBorder * 2,
+                    height=squareSize - selectionBorder * 2,
+                    text="Show Choices"}
+local saveBtn = {   x=border + 5 * squareSize + selectionBorder,
                     y=border + squares * squareSize + selectionBorder,
                     width=squareSize * 2 - selectionBorder * 2,
-                    height=squareSize - selectionBorder * 2}
-local saveBtn = {   x=border + (squares-4) * squareSize + selectionBorder,
+                    height=squareSize - selectionBorder * 2,
+                    text="Save"}
+local solveBtn = {  x=border + 3 * squareSize + selectionBorder,
                     y=border + squares * squareSize + selectionBorder,
                     width=squareSize * 2 - selectionBorder * 2,
-                    height=squareSize - selectionBorder * 2}
+                    height=squareSize - selectionBorder * 2,
+                    text="Solve"}
+local exitBtn = {   x=border + 7 * squareSize + selectionBorder,
+                    y=border + squares * squareSize + selectionBorder,
+                    width = squareSize * 2 - selectionBorder * 2,
+                    height = squareSize - selectionBorder * 2,
+                    text="Exit"}
+local buttons = {choiceBtn, saveBtn, solveBtn, exitBtn}
 
 local selection = {x=nil,y=nil}
 local board = {}
 local options = nil
+local cozette20 = love.graphics.newFont("CozetteVector.ttf", 20)
+local cozette10 = love.graphics.newFont("CozetteVector.ttf", 10)
 
 local function getSquare(x, y)
     local sx, sy = math.floor((x - border) / squareSize), math.floor((y - border) / squareSize)
@@ -44,53 +59,48 @@ local function loadBoard()
     end
 end
 
-local function solveBoard()
-    options = {}
-    local empty = 0
-    for i,v in ipairs(board) do
-        options[i] = {}
-        for j,w in ipairs(v) do
-            if w > 0 then
-                options[i][j] = w
-            else
-                options[i][j] = {1,2,3,4,5,6,7,8,9}
-                empty = empty + 1
+local function getOptions()
+    if not options then
+        options = {}
+        for i,v in ipairs(board) do
+            options[i] = {}
+            for j,w in ipairs(v) do
+                if w > 0 then
+                    options[i][j] = w
+                else
+                    options[i][j] = {1,2,3,4,5,6,7,8,9}
+                end
             end
         end
     end
-    while empty > 0 do
-        for i,v in ipairs(board) do
-            for j,w in ipairs(v) do
-                if w == 0 then
-                    local ih = math.ceil(i/3)
-                    local jh = math.ceil(j/3)
-                    for k=1,#v do
-                        if v[k] ~= 0 then
-                            options[i][j][v[k]] = 0
-                        end
-                        if board[k][j] ~= 0 then
-                            options[i][j][board[k][j]] = 0
-                        end
-                        local kj = math.ceil(k/3)
-                        local ki = k - (kj - 1) * 3
-                        local kih = ki + (ih - 1) * 3
-                        local kjh = kj + (jh - 1) * 3
-                        if board[kih][kjh] ~= 0 then
-                            options[i][j][board[kih][kjh]] = 0
-                        end
+    for i,v in ipairs(board) do
+        for j,w in ipairs(v) do
+            if w == 0 then
+                local ih = math.ceil(i/3)
+                local jh = math.ceil(j/3)
+                for k=1,#v do
+                    if v[k] ~= 0 then
+                        options[i][j][v[k]] = 0
+                    end
+                    if board[k][j] ~= 0 then
+                        options[i][j][board[k][j]] = 0
+                    end
+                    local kj = math.ceil(k/3)
+                    local ki = k - (kj - 1) * 3
+                    local kih = ki + (ih - 1) * 3
+                    local kjh = kj + (jh - 1) * 3
+                    if board[kih][kjh] ~= 0 then
+                        options[i][j][board[kih][kjh]] = 0
                     end
                 end
             end
         end
-        empty = 0
     end
-
-    print(options)
 end
 
 function love.load()
     love.window.setMode(border * 2 + squareSize * squares, border * 2 + squareSize * squares)
-    love.graphics.setFont(love.graphics.newFont("CozetteVector.ttf", 20))
+    love.graphics.setFont(cozette20)
     local data = loadBoard()
     if data then
         board = data
@@ -131,23 +141,45 @@ function love.draw()
         end
     end
     
-    love.graphics.rectangle("line", solveBtn.x, solveBtn.y, solveBtn.width, solveBtn.height)
-    love.graphics.print("Solve", solveBtn.x + math.floor(solveBtn.width/4), solveBtn.y + math.floor(solveBtn.height/3))
+    if options then
+        love.graphics.setFont(cozette10)
+        for i,v in ipairs(board) do
+            for j,w in ipairs(v) do
+                if w == 0 then
+                    for k,x in ipairs(options[i][j]) do
+                        if x > 0 and x < 6 then
+                            love.graphics.print(x,  border + squareSize * (j-1) + math.floor(squareSize/6) * (k-1) + selectionBorder,
+                                                    border + squareSize * (i-1) + selectionBorder)
+                        elseif x >= 6 then
+                            love.graphics.print(x,  border + squareSize * (j-1) + math.floor(squareSize/6) * (k-6) + selectionBorder,
+                                                    border + squareSize * (i-1) + math.floor(squareSize/4) + selectionBorder)
+                        end
+                    end
+                end
+            end
+        end
+        love.graphics.setFont(cozette20)
+    end
 
-    love.graphics.rectangle("line", saveBtn.x, saveBtn.y, saveBtn.width, saveBtn.height)
-    love.graphics.print("Save", saveBtn.x + math.floor(saveBtn.width/4), saveBtn.y + math.floor(saveBtn.height/3))
+    for i,btn in ipairs(buttons) do
+        love.graphics.rectangle("line", btn.x, btn.y, btn.width, btn.height)
+        love.graphics.print(btn.text, btn.x + selectionBorder, btn.y + math.floor(btn.height/3))
+    end
 end
 
 function love.mousereleased(x, y, button)
     if button == 1 then
         selection.x, selection.y = getSquare(x, y)
         if selection.x == nil then
-            if  x > solveBtn.x and x < solveBtn.x + solveBtn.width
-            and y > solveBtn.y and y < solveBtn.y + solveBtn.height then
-                solveBoard()
+            if  x > choiceBtn.x and x < choiceBtn.x + choiceBtn.width
+            and y > choiceBtn.y and y < choiceBtn.y + choiceBtn.height then
+                getOptions()
             elseif  x > saveBtn.x and x < saveBtn.x + saveBtn.width
             and     y > saveBtn.y and y < saveBtn.y + saveBtn.height then
                 saveBoard()
+            elseif  x > exitBtn.x and x < exitBtn.x + exitBtn.width
+            and     y > exitBtn.y and y < exitBtn.y + exitBtn.width then
+                love.event.quit()
             end
         end
     end
