@@ -68,7 +68,7 @@ local function getOptions()
                 if w > 0 then
                     options[i][j] = w
                 else
-                    options[i][j] = {1,2,3,4,5,6,7,8,9}
+                    options[i][j] = {1,2,3,4,5,6,7,8,9} -- todo: make work with other board sizes
                 end
             end
         end
@@ -94,6 +94,47 @@ local function getOptions()
                     end
                 end
             end
+        end
+    end
+end
+
+local function isSolved()
+    for _,v in ipairs(board) do
+        for _,w in ipairs(v) do
+            if w == 0 then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+local function solveBoard()
+    getOptions()
+    local changed = false
+    for i,v in ipairs(board) do
+        for j,w in ipairs(v) do
+            if w == 0 then
+                local o = 0
+                local num = 0
+                for k=1,#v do
+                    if options and options[i][j][k] ~= 0 then
+                        o = o + 1
+                        num = k
+                    end
+                end
+                if o == 1 then
+                    board[i][j] = num
+                    changed = true
+                end
+            end
+        end
+    end
+    if not isSolved() then
+        if changed then
+            solveBoard()
+        else
+            getOptions()
         end
     end
 end
@@ -178,8 +219,11 @@ function love.mousereleased(x, y, button)
             and     y > saveBtn.y and y < saveBtn.y + saveBtn.height then
                 saveBoard()
             elseif  x > exitBtn.x and x < exitBtn.x + exitBtn.width
-            and     y > exitBtn.y and y < exitBtn.y + exitBtn.width then
+            and     y > exitBtn.y and y < exitBtn.y + exitBtn.height then
                 love.event.quit()
+            elseif  x > solveBtn.x and x < solveBtn.x + solveBtn.width
+            and     y > solveBtn.y and y < solveBtn.y + solveBtn.height then
+                solveBoard()
             end
         end
     end
