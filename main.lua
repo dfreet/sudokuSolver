@@ -1,3 +1,4 @@
+local lume = require "lume"
 if arg[2] == "debug" then
     require("lldebugger").start()
 end
@@ -5,10 +6,20 @@ end
 local border = 50
 local squareSize = 50
 local squares = 9
-local selectionBorder=4
+local selectionBorder = 4
+
+local solveBtn = {  x=border + (squares-2) * squareSize + selectionBorder,
+                    y=border + squares * squareSize + selectionBorder,
+                    width=squareSize * 2 - selectionBorder * 2,
+                    height=squareSize - selectionBorder * 2}
+local saveBtn = {   x=border + (squares-4) * squareSize + selectionBorder,
+                    y=border + squares * squareSize + selectionBorder,
+                    width=squareSize * 2 - selectionBorder * 2,
+                    height=squareSize - selectionBorder * 2}
 
 local selection = {x=nil,y=nil}
 local board = {}
+local options = nil
 
 local function getSquare(x, y)
     local sx, sy = math.floor((x - border) / squareSize), math.floor((y - border) / squareSize)
@@ -19,13 +30,76 @@ local function getSquare(x, y)
     end
 end
 
+local function saveBoard()
+    local serialized = lume.serialize(board)
+    love.filesystem.write("sudoku.txt", serialized)
+end
+
+local function loadBoard()
+    if love.filesystem.getInfo("sudoku.txt") then
+        local file = love.filesystem.read("sudoku.txt")
+        return lume.deserialize(file)
+    else
+        return false
+    end
+end
+
+local function solveBoard()
+    options = {}
+    local empty = 0
+    for i,v in ipairs(board) do
+        options[i] = {}
+        for j,w in ipairs(v) do
+            if w > 0 then
+                options[i][j] = w
+            else
+                options[i][j] = {1,2,3,4,5,6,7,8,9}
+                empty = empty + 1
+            end
+        end
+    end
+    while empty > 0 do
+        for i,v in ipairs(board) do
+            for j,w in ipairs(v) do
+                if w == 0 then
+                    local ih = math.ceil(i/3)
+                    local jh = math.ceil(j/3)
+                    for k=1,#v do
+                        if v[k] ~= 0 then
+                            options[i][j][v[k]] = 0
+                        end
+                        if board[k][j] ~= 0 then
+                            options[i][j][board[k][j]] = 0
+                        end
+                        local kj = math.ceil(k/3)
+                        local ki = k - (kj - 1) * 3
+                        local kih = ki + (ih - 1) * 3
+                        local kjh = kj + (jh - 1) * 3
+                        if board[kih][kjh] ~= 0 then
+                            options[i][j][board[kih][kjh]] = 0
+                        end
+                    end
+                end
+            end
+        end
+        empty = 0
+    end
+
+    print(options)
+end
+
 function love.load()
     love.window.setMode(border * 2 + squareSize * squares, border * 2 + squareSize * squares)
     love.graphics.setFont(love.graphics.newFont("CozetteVector.ttf", 20))
-    for i=1,squares do
-        board[i] = {}
-        for j=1,squares do
-            board[i][j] = 0
+    local data = loadBoard()
+    if data then
+        board = data
+    else
+        for i=1,squares do
+            board[i] = {}
+            for j=1,squares do
+                board[i][j] = 0
+            end
         end
     end
 end
@@ -56,11 +130,26 @@ function love.draw()
             end
         end
     end
+    
+    love.graphics.rectangle("line", solveBtn.x, solveBtn.y, solveBtn.width, solveBtn.height)
+    love.graphics.print("Solve", solveBtn.x + math.floor(solveBtn.width/4), solveBtn.y + math.floor(solveBtn.height/3))
+
+    love.graphics.rectangle("line", saveBtn.x, saveBtn.y, saveBtn.width, saveBtn.height)
+    love.graphics.print("Save", saveBtn.x + math.floor(saveBtn.width/4), saveBtn.y + math.floor(saveBtn.height/3))
 end
 
 function love.mousereleased(x, y, button)
     if button == 1 then
         selection.x, selection.y = getSquare(x, y)
+        if selection.x == nil then
+            if  x > solveBtn.x and x < solveBtn.x + solveBtn.width
+            and y > solveBtn.y and y < solveBtn.y + solveBtn.height then
+                solveBoard()
+            elseif  x > saveBtn.x and x < saveBtn.x + saveBtn.width
+            and     y > saveBtn.y and y < saveBtn.y + saveBtn.height then
+                saveBoard()
+            end
+        end
     end
 end
 
